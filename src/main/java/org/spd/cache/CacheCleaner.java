@@ -1,8 +1,8 @@
 package org.spd.cache;
 
-import org.spd.proxy.server.ProxyServer;
+import org.spd.server.ProxyServer;
 
-import static org.spd.proxy.server.ProxyServer.logger;
+import static org.spd.server.ProxyServer.logger;
 
 public class CacheCleaner implements Runnable {
 

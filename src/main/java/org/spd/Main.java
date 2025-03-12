@@ -1,6 +1,6 @@
 package org.spd;
 
-import org.spd.proxy.server.ProxyServer;
+import org.spd.server.ProxyServer;
 
 public class Main {
     public static void main(String[] args) {

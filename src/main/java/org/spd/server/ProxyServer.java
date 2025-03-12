@@ -1,4 +1,4 @@
-package org.spd.proxy.server;
+package org.spd.server;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
