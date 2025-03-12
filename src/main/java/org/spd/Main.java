@@ -1,7 +1,10 @@
 package org.spd;
 
+import org.spd.proxy.server.ProxyServer;
+
 public class Main {
     public static void main(String[] args) {
-        System.out.println("Hello world!");
+        ProxyServer proxyServer = new ProxyServer();
+        proxyServer.start();
     }
 }

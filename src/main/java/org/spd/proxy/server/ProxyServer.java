@@ -2,6 +2,9 @@ package org.spd.proxy.server;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.spd.cache.CacheCleaner;
+import org.spd.cache.CachedResponse;
+import org.spd.cache.LRUCache;
 import org.spd.ratelimiter.RateLimiterStrategy;
 import org.spd.ratelimiter.FixedWindowCounterRateLimiter;
 
@@ -10,8 +13,6 @@ import java.net.HttpURLConnection;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URL;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -20,11 +21,16 @@ public class ProxyServer {
     private static final int PORT = 8080;
     private static final int THREAD_POOL_SIZE = 20;
     private static final ExecutorService threadPool = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
-    private static final Logger logger = LoggerFactory.getLogger(ProxyServer.class);
-    private static final LRUCache<String, CachedResponse> cache = new LRUCache<>(100);
+    public static final Logger logger = LoggerFactory.getLogger(ProxyServer.class);
+    public static final LRUCache<String, CachedResponse> cache = new LRUCache<>(100);
     private static final RateLimiterStrategy rateLimiter = new FixedWindowCounterRateLimiter(60, 2);
 
-    public static void main(String[] args) {
+    public void start() {
+
+        Thread cacheCleanupThread = new Thread(new CacheCleaner());
+        cacheCleanupThread.setDaemon(true); // Mark as daemon thread
+        cacheCleanupThread.start();
+
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             logger.info("Shutting down server...");
             threadPool.shutdown();
@@ -97,8 +103,8 @@ public class ProxyServer {
         CachedResponse cachedResponse = cache.get(url);
         if (cachedResponse != null) {
             logger.info("Cache hit for URL: {}", url);
-            out.write(cachedResponse.headers.getBytes());
-            out.write(cachedResponse.body.getBytes());
+            out.write(cachedResponse.getHeaders().getBytes());
+            out.write(cachedResponse.getBody().getBytes());
             out.flush();
             return;
         }
@@ -153,30 +159,6 @@ public class ProxyServer {
             sendErrorResponse(out, statusCode, statusMessage);
         } catch (IOException e) {
             logger.error("Error sending error response", e);
-        }
-    }
-
-    private static class LRUCache<K, V> extends LinkedHashMap<K, V> {
-        private final int maxSize;
-
-        public LRUCache(int maxSize) {
-            super(maxSize, 0.75f, true);
-            this.maxSize = maxSize;
-        }
-
-        @Override
-        protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
-            return size() > maxSize;
-        }
-    }
-
-    private static class CachedResponse {
-        String headers;
-        String body;
-
-        public CachedResponse(String headers, String body) {
-            this.headers = headers;
-            this.body = body;
         }
     }
 }
